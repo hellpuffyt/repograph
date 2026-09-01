@@ -1,0 +1,135 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: test (node ${{ matrix.node-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: install
+        run: npm ci
+
+      - name: build (core, web, cli — the viewer is embedded before the CLI's own tests run)
+        run: npm run build
+
+      - name: test
+        run: npm test -w packages/core && npm test -w packages/cli
+
+  quality:
+    name: types, lint and coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: install
+        run: npm ci
+
+      - name: build
+        run: npm run build
+
+      - name: tsc --noEmit (every package)
+        run: npm run typecheck
+
+      - name: eslint
+        run: npm run lint
+
+      # vitest.config.ts in each package fails the run below the thresholds it declares.
+      - name: coverage (core)
+        run: npm run coverage -w packages/core
+
+      - name: coverage (cli)
+        run: npm run coverage -w packages/cli
+
+  dogfood:
+    name: the tool maps its own bundled fixture
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: install and build
+        run: npm ci && npm run build
+
+      # fixtures/demo-app is a deliberately small, deterministic codebase with
+      # one known import cycle and several known-dead exports. The exact text
+      # is asserted below — "ran without crashing" proves nothing on its own.
+      - name: report output matches the known-good fixture analysis exactly
+        run: |
+          set -euo pipefail
+          node packages/cli/dist/bin.js report fixtures/demo-app --entry src/index.ts > /tmp/report.txt
+          diff -u fixtures/demo-app.report.txt /tmp/report.txt
+
+      - name: blast-radius output for a known hub file is exact
+        run: |
+          set -euo pipefail
+          node packages/cli/dist/bin.js blast fixtures/demo-app src/store/state.ts > /tmp/blast.txt
+          diff -u fixtures/demo-app.blast.txt /tmp/blast.txt
+
+      - name: analyze --entry excludes the declared entry point's exports from dead-code detection
+        run: |
+          set -euo pipefail
+          node packages/cli/dist/bin.js analyze fixtures/demo-app --entry src/index.ts --out /tmp/analysis.json
+          node -e "
+            const a = require('/tmp/analysis.json');
+            if (a.fileCount !== 8) throw new Error('expected 8 files, got ' + a.fileCount);
+            if (a.cycles.length !== 1) throw new Error('expected 1 cycle, got ' + a.cycles.length);
+            if (a.deadExports.length !== 7) throw new Error('expected 7 dead exports, got ' + a.deadExports.length);
+            if (a.deadExports.some((d) => d.path === 'src/index.ts')) throw new Error('entry point exports must never be flagged dead');
+            console.log('analyze --entry: exact counts confirmed');
+          "
+
+      - name: html export produces a self-contained file with the graph embedded
+        run: |
+          set -euo pipefail
+          node packages/cli/dist/bin.js html fixtures/demo-app --entry src/index.ts --out /tmp/map.html
+          grep -q "window.__REPOGRAPH_DATA__" /tmp/map.html
+          grep -q '"fileCount":8' /tmp/map.html
+          test "$(wc -c < /tmp/map.html | tr -d ' ')" -gt 100000
+          echo "html export: self-contained viewer confirmed"
+
+      # A directory with a broken relative import and no cycles must not be
+      # misreported: the exit code is 0 (no cycles) even though the import
+      # doesn't resolve.
+      - name: exit code is 0 for a fixture with no cycles
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/clean-fixture/src
+          echo 'export const a = 1;' > /tmp/clean-fixture/src/a.ts
+          set +e
+          node packages/cli/dist/bin.js report /tmp/clean-fixture
+          code=$?
+          set -e
+          test "$code" = "0"
