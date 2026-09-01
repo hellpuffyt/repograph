@@ -88,8 +88,13 @@ jobs:
       # is asserted below — "ran without crashing" proves nothing on its own.
       - name: report output matches the known-good fixture analysis exactly
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # `report` exits 1 when it finds a cycle - the fixture deliberately
+          # has one, so that exit code is the expected, correct signal, not a
+          # crash. Plain `set -e` would abort here before the diff ever ran.
           node packages/cli/dist/bin.js report fixtures/demo-app --entry src/index.ts > /tmp/report.txt
+          code=$?
+          test "$code" = "1"
           diff -u fixtures/demo-app.report.txt /tmp/report.txt
 
       - name: blast-radius output for a known hub file is exact
