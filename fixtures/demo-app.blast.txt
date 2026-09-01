@@ -1,0 +1,8 @@
+Blast radius for src/store/state.ts
+  3 files affected across 2 hops
+  Exports actually consumed: cache
+  hop 1:
+    - src/api/client.ts
+    - src/store/actions.ts
+  hop 2:
+    - src/index.ts

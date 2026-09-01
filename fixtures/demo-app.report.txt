@@ -1,0 +1,22 @@
+repograph report for demo-app
+8 files, 7 internal dependency edges
+
+Circular dependencies: 1
+  - src/store/actions.ts -> src/store/state.ts -> src/store/actions.ts
+
+Dead exports (never imported): 7
+  - src/api/types.ts:6 ApiError (interface)
+  - src/router.ts:3 Router (interface)
+  - src/store/actions.ts:3 Action (interface)
+  - src/store/state.ts:5 seed (function)
+  - src/utils/format.ts:5 slugify (function)
+  - src/utils/unused.ts:7 DEFAULT_LOCALE (const)
+  - src/utils/unused.ts:3 legacyFormatter (function)
+
+Most-depended-on files (top 6):
+  - src/store/state.ts (imported by 2 files, imports 1)
+  - src/api/client.ts (imported by 1 file, imports 2)
+  - src/api/types.ts (imported by 1 file, imports 0)
+  - src/router.ts (imported by 1 file, imports 1)
+  - src/store/actions.ts (imported by 1 file, imports 1)
+  - src/utils/format.ts (imported by 1 file, imports 0)

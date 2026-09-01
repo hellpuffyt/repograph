@@ -1,0 +1,29 @@
+{
+  "name": "repograph",
+  "version": "0.1.0",
+  "description": "An interactive architecture map for a codebase: module dependency graph, dead-code and circular-dependency detection, API-surface extraction, and click-to-highlight blast radius.",
+  "type": "module",
+  "bin": {
+    "repograph": "dist/bin.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "license": "MIT",
+  "files": [
+    "dist",
+    "web"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-web.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "coverage": "vitest run --coverage"
+  },
+  "dependencies": {
+    "@repograph/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^2.1.9",
+    "vitest": "^2.1.9"
+  }
+}
