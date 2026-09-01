@@ -88,12 +88,17 @@ jobs:
       # is asserted below — "ran without crashing" proves nothing on its own.
       - name: report output matches the known-good fixture analysis exactly
         run: |
-          set -uo pipefail
+          # GitHub Actions runs every `run:` block as `bash -e {0}` by
+          # default, regardless of any `set` line inside the script itself -
+          # an explicit `set +e` is required to actually cancel that, not
+          # just omitting `-e` from a later `set` call.
+          set +e
           # `report` exits 1 when it finds a cycle - the fixture deliberately
           # has one, so that exit code is the expected, correct signal, not a
-          # crash. Plain `set -e` would abort here before the diff ever ran.
+          # crash.
           node packages/cli/dist/bin.js report fixtures/demo-app --entry src/index.ts > /tmp/report.txt
           code=$?
+          set -euo pipefail
           test "$code" = "1"
           diff -u fixtures/demo-app.report.txt /tmp/report.txt
 
