@@ -123,7 +123,7 @@ export function helpText(): string {
     "  repograph report <dir> [--entry a.ts,b.ts]                     Print a human-readable text report",
     "  repograph blast <dir> <file> [--depth n]                       Print the blast radius of one file",
     "  repograph html <dir> [--entry a.ts,b.ts] [--out file.html]     Write a self-contained interactive HTML graph",
-    "  repograph serve <dir> [--port 4173] [--entry a.ts,b.ts]        Serve the interactive graph over HTTP",
+    "  repograph serve <dir> [--port 4173] [--host 127.0.0.1] [--entry a.ts,b.ts] Serve the interactive graph over HTTP",
     "  repograph --version                                            Print the CLI version",
     "",
     "Notes:",
