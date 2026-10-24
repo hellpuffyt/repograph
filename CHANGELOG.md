@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Dev dependencies: `vitest`/`@vitest/coverage-v8` 2.x -> 4.1.12 and the viewer's
+  `vite` 5 -> 6.4, clearing the test/dev-server advisories (tinypool
+  GHSA-5gmw-xhrv-c9v3 / GHSA-85c8-ppgw-ccpr, esbuild GHSA-67mh-4wv8-2f99,
+  @vitest/mocker GHSA-qxg6-89mg-rqv8). `npm audit` is clean.
 - `repograph serve` bound every interface (`*:4173`) and answered any `Host`
   header; it now binds `127.0.0.1` by default (`--host` to change, with a warning)
   and rejects non-loopback `Host` headers (DNS rebinding) with 421.
