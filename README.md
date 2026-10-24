@@ -52,15 +52,18 @@ explore:
 
 ## Install
 
-```
-npm install --global repograph
-```
-
-or run it without installing:
+This project is **not published to npm**. The `repograph` package on the npm registry
+is an unrelated project by another author — do not `npm install --global repograph` or
+`npx repograph` expecting this tool. Install from a clone:
 
 ```
-npx repograph html ./my-project --out map.html
+git clone https://github.com/hellpuffyt/repograph
+cd repograph
+npm ci && npm run build
+npm link -w packages/cli    # puts `repograph` on your PATH
 ```
+
+(or run it directly: `node packages/cli/dist/bin.js html ./my-project --out map.html`)
 
 ## Usage
 
@@ -79,16 +82,21 @@ $ repograph html fixtures/demo-app --entry src/index.ts --out map.html
 Wrote interactive graph to map.html (8 files, 1 cycles, 7 dead exports).
 ```
 
-### `repograph serve <dir> [--port 4173] [--entry a.ts,b.ts]`
+### `repograph serve <dir> [--port 4173] [--host 127.0.0.1] [--entry a.ts,b.ts]`
 
 Same viewer, served over HTTP, and re-analyzed on every request — so editing the repo
 and refreshing the browser shows the current graph without restarting anything.
 
 ```
 $ repograph serve fixtures/demo-app --entry src/index.ts
-repograph serving /path/to/fixtures/demo-app at http://localhost:4173
+repograph serving /path/to/fixtures/demo-app at http://127.0.0.1:4173
 Press Ctrl+C to stop.
 ```
+
+The server binds `127.0.0.1` by default and answers only requests whose `Host` header
+names the loopback interface (or the `--host` you bound), which blocks DNS-rebinding
+reads from other websites. `--host 0.0.0.0` exposes your repo's file names and exports
+to the network and prints a warning. A busy port is reported as an error.
 
 ### `repograph report <dir> [--entry a.ts,b.ts]`
 
@@ -215,6 +223,13 @@ npm run typecheck
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
+
+## Security
+
+repograph reads source files under the directory you give it and never executes them.
+Symlinked directories are not followed, and symlinked files are only included when they
+resolve inside that directory, so a report cannot pick up files from elsewhere on disk.
+Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.md).
 
 ## License
 

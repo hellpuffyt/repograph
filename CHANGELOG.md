@@ -5,6 +5,27 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Security
+
+- `repograph serve` bound every interface (`*:4173`) and answered any `Host`
+  header; it now binds `127.0.0.1` by default (`--host` to change, with a warning)
+  and rejects non-loopback `Host` headers (DNS rebinding) with 421.
+- The scanner followed symlinks: a directory link to an ancestor recursed
+  without end and links pointing outside the root pulled outside files into the
+  report. Symlinked directories are skipped; symlinked files must resolve inside.
+
+### Fixed
+
+- `repograph serve` on a busy port printed "serving" and then crashed with an
+  unhandled `EADDRINUSE`; it now reports the error and exits 1. `--port` is validated.
+
+### Documentation
+
+- The README no longer says `npm install --global repograph` / `npx repograph`:
+  that npm package is an unrelated project.
+
 ## [0.1.0] - 2026-09-01
 
 ### Added

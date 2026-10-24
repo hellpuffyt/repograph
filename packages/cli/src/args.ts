@@ -5,7 +5,7 @@ export interface ParsedArgs {
   flags: Map<string, string | boolean>;
 }
 
-const VALUE_FLAGS = new Set(["--out", "--entry", "--depth", "--port", "--file"]);
+const VALUE_FLAGS = new Set(["--out", "--entry", "--depth", "--port", "--file", "--host"]);
 
 export function parseArgs(argv: string[]): ParsedArgs {
   const [command, ...rest] = argv;
