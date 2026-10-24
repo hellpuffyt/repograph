@@ -3,6 +3,15 @@ import { posix } from "node:path";
 const RESOLVABLE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".json"];
 const INDEX_CANDIDATES = RESOLVABLE_EXTENSIONS.map((ext) => `index${ext}`);
 
+// TypeScript ESM (moduleResolution node16/nodenext/bundler) writes the
+// *emitted* extension in import specifiers: `./util.js` refers to `util.ts`.
+const TS_SOURCE_FOR_JS_EXTENSION: Record<string, readonly string[]> = {
+  ".js": [".ts", ".tsx"],
+  ".jsx": [".tsx"],
+  ".mjs": [".mts"],
+  ".cjs": [".cts"],
+};
+
 /**
  * Resolve an import specifier written inside `fromPath` to a repo-relative
  * path present in `knownFiles`. Returns null for bare/external specifiers
@@ -22,6 +31,13 @@ export function resolveSpecifier(
 
   // Exact match (specifier already included an extension).
   if (knownFiles.has(base)) return base;
+
+  // `./x.js` written in TS source for a file that only exists as `x.ts`.
+  const jsExt = posix.extname(base);
+  for (const tsExt of TS_SOURCE_FOR_JS_EXTENSION[jsExt] ?? []) {
+    const candidate = `${base.slice(0, -jsExt.length)}${tsExt}`;
+    if (knownFiles.has(candidate)) return candidate;
+  }
 
   // Try appending each resolvable extension.
   for (const ext of RESOLVABLE_EXTENSIONS) {

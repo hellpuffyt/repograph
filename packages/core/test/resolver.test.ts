@@ -37,6 +37,14 @@ describe("resolveSpecifier", () => {
     expect(resolveSpecifier("src/index.ts", "./legacy.js", files)).toBe("src/legacy.js");
   });
 
+  it("maps an emitted .js/.jsx specifier to the .ts/.tsx source that exists", () => {
+    const tsEsm = new Set(["src/index.ts", "src/graph.ts", "src/view.tsx"]);
+    expect(resolveSpecifier("src/index.ts", "./graph.js", tsEsm)).toBe("src/graph.ts");
+    expect(resolveSpecifier("src/index.ts", "./view.js", tsEsm)).toBe("src/view.tsx");
+    expect(resolveSpecifier("src/index.ts", "./view.jsx", tsEsm)).toBe("src/view.tsx");
+    expect(resolveSpecifier("src/index.ts", "./missing.js", tsEsm)).toBeNull();
+  });
+
   it("returns null for a relative specifier that resolves to nothing known", () => {
     expect(resolveSpecifier("src/index.ts", "./nope", files)).toBeNull();
   });

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- Dev dependencies: `vitest`/`@vitest/coverage-v8` 2.x -> 4.1.12 and the viewer's
+  `vite` 5 -> 6.4, clearing the test/dev-server advisories (tinypool
+  GHSA-5gmw-xhrv-c9v3 / GHSA-85c8-ppgw-ccpr, esbuild GHSA-67mh-4wv8-2f99,
+  @vitest/mocker GHSA-qxg6-89mg-rqv8). `npm audit` is clean.
 - `repograph serve` bound every interface (`*:4173`) and answered any `Host`
   header; it now binds `127.0.0.1` by default (`--host` to change, with a warning)
   and rejects non-loopback `Host` headers (DNS rebinding) with 421.
@@ -18,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- TypeScript ESM imports that name the emitted file (`import "./graph.js"` for
+  `graph.ts`, the node16/nodenext convention) were treated as unresolved, so a
+  codebase written that way showed no internal edges and every export as dead.
+  `.js`/`.jsx`/`.mjs`/`.cjs` specifiers now fall back to the matching TS source.
 - `repograph serve` on a busy port printed "serving" and then crashed with an
   unhandled `EADDRINUSE`; it now reports the error and exits 1. `--port` is validated.
 
