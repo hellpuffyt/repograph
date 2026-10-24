@@ -18,6 +18,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- TypeScript ESM imports that name the emitted file (`import "./graph.js"` for
+  `graph.ts`, the node16/nodenext convention) were treated as unresolved, so a
+  codebase written that way showed no internal edges and every export as dead.
+  `.js`/`.jsx`/`.mjs`/`.cjs` specifiers now fall back to the matching TS source.
 - `repograph serve` on a busy port printed "serving" and then crashed with an
   unhandled `EADDRINUSE`; it now reports the error and exits 1. `--port` is validated.
 
