@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { AnalysisResult } from "@repograph/core";
 import { serializeAnalysis, type SerializedAnalysis } from "@repograph/core";
@@ -11,10 +11,19 @@ export interface RepographDataPayload extends SerializedAnalysis {
   generatedAt: string;
 }
 
-/** Turn an AnalysisResult into the JSON payload the web viewer expects. */
+/**
+ * Turn an AnalysisResult into the JSON payload the web viewer expects.
+ *
+ * The payload is embedded in an HTML file meant to be shared (attached to a
+ * PR, dropped in a wiki), so `rootDir` is reduced to the analyzed directory's
+ * basename: the absolute local path (home directory, username, checkout
+ * layout) must never leak into the report. Node paths are already
+ * repo-relative.
+ */
 export function toViewerData(result: AnalysisResult, projectName: string): RepographDataPayload {
   return {
     ...serializeAnalysis(result),
+    rootDir: basename(result.rootDir) || ".",
     projectName,
     generatedAt: new Date().toISOString(),
   };
