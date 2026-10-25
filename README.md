@@ -1,9 +1,9 @@
 # repograph
 
-An interactive architecture map for a real TypeScript/JavaScript codebase: a module
-dependency graph you can click through, with circular-dependency detection, dead-export
-detection, API-surface extraction, and click-to-highlight blast radius — rendered as an
-explorable graph, not a wall of text.
+repograph builds the module dependency graph of a TypeScript/JavaScript repository and
+renders it as a clickable map. It reports import cycles, exports nobody imports, each
+file's exported API, and the blast radius of a file: everything that transitively
+imports it.
 
 [Case study ↗](https://hellpuff.dev/work/repograph)
 
@@ -16,46 +16,32 @@ explorable graph, not a wall of text.
 repograph html ./my-project --out map.html
 ```
 
-opens as a single static HTML file: drag nodes, zoom, search, filter to just the cycles
-or just the dead code, click any file to see what would break if you changed it.
+The result is one static HTML file. You can drag nodes, zoom, filter the file list, show
+only cycles or only dead code, and click a file to see which files depend on it.
 
-## Why this and not the other 1,000 "dependency graph" tools
+## How it differs from report-only tools
 
-Most tools in this space stop at one of two shapes:
+`madge --circular`, `depcheck` and `ts-prune` each run one of these checks and print
+text. repograph runs all of them on the same graph and lets you inspect the result
+visually. The specifics:
 
-1. **A CLI that prints a report.** `madge --circular`, `depcheck`, `ts-prune` — each one
-   does *one* of these checks and hands you text. You still have to build the mental
-   model of the graph yourself.
-2. **A generic force-graph viewer.** Drop a JSON file into a D3/Cytoscape demo and get a
-   pretty picture with no analysis behind it — no cycle detection, no dead-code
-   reasoning, no notion of "what does this file's export surface even look like."
-
-repograph is one tool that does the analysis *and* renders it as something you actually
-explore:
-
-- **Blast radius is a first-class query, not an afterthought.** Click any file and the
-  graph highlights every file that transitively depends on it, grouped by hop distance,
-  plus which of that file's exports are the ones actually keeping those dependents alive
-  (`consumedExports`) — so you can tell "this export is load-bearing for 40 files" apart
-  from "this export happens to also be unused."
-- **Dead-code detection understands re-exports and namespace imports**, not just "is
-  this name imported anywhere." `export * from`, `import * as ns`, default vs. named
-  imports, and type-only imports are all tracked separately so the false-positive rate
-  on a real codebase stays low. Declared entry points (`--entry`) are exempted, because
-  an entry point's exports *are* its public API by definition.
-- **Cycle detection is real Tarjan SCC**, not "did I revisit a node while doing DFS" (a
-  common approximation that reports connected components, not cycles, and can miss or
-  over-report on diamonds). It's implemented iteratively so it doesn't blow the call
-  stack on a large repo.
-- **The output is one self-contained HTML file.** No server to keep running, no
-  `node_modules` to ship alongside a report — `repograph html` produces a single file
-  you can attach to a PR, open from a file:// URL, or drop in an internal wiki.
-- **One runtime dependency for the analysis engine: the TypeScript compiler.** `@repograph/core` parses with
-  the TypeScript compiler API (the same parser `tsc` itself uses) and does everything
-  else — graph building, SCC/cycle detection, dead-export analysis, blast-radius BFS,
-  even the graph's force-directed layout in the viewer — with no additional runtime
-  dependency. The CLI's only dependency is `@repograph/core`; the web viewer's only
-  *runtime* dependency is React.
+- **Blast radius.** Clicking a file highlights every transitive dependent, grouped by
+  hop distance, and lists which of the file's exports those dependents actually reach
+  (`consumedExports`). That separates an export forty files rely on from one that is
+  merely exported.
+- **Dead exports.** `export * from`, `import * as ns`, default vs. named imports and
+  type-only imports are tracked separately, so re-exports and namespace imports don't
+  produce false "unused" reports. Files passed with `--entry` are exempt, because an
+  entry point's exports are its public API.
+- **Cycles.** Cycles are the strongly connected components of size > 1, found with an
+  iterative Tarjan's algorithm, so deep graphs don't overflow the call stack.
+- **One file of output.** `repograph html` needs no server and no `node_modules` next
+  to it. You can attach the file to a PR, open it from `file://`, or put it in a wiki.
+- **Few dependencies.** `@repograph/core` depends only on `typescript`: it uses the
+  compiler's parser and implements graph building, cycle detection, dead-export
+  analysis and blast-radius BFS itself. The viewer's force-directed layout is also
+  hand-written; its runtime dependencies are `react` and `react-dom`. The CLI depends
+  only on `@repograph/core`.
 
 ## Status
 
@@ -74,7 +60,7 @@ these claims, and what is not covered, is in
 ## Install
 
 This project is **not published to npm**. The `repograph` package on the npm registry
-is an unrelated project by another author — do not `npm install --global repograph` or
+is an unrelated project by another author; do not `npm install --global repograph` or
 `npx repograph` expecting this tool. Install from a clone:
 
 ```
@@ -94,12 +80,12 @@ other build-output directories are skipped by default.
 
 ### `repograph html <dir> [--out file.html] [--entry a.ts,b.ts]`
 
-Writes a self-contained interactive HTML file — the graph, the analysis, and the
-viewer, all in one file with no external requests. This is the main way to use
+Writes a self-contained interactive HTML file: the graph, the analysis and the
+viewer in one file that makes no external requests. This is the main way to use
 repograph.
 
 The embedded data carries repo-relative file paths and the analyzed directory's
-basename only — not its absolute location on your disk — so the file is safe to share.
+basename only, not its absolute location on your disk.
 
 ```
 $ repograph html fixtures/demo-app --entry src/index.ts --out map.html
@@ -108,12 +94,12 @@ Wrote interactive graph to map.html (8 files, 1 cycles, 7 dead exports).
 
 <img src="docs/assets/dependency-graph.webp" width="100%" alt="repograph force-directed dependency graph of its own repository, with cycle and dead-code nodes highlighted">
 
-<sub>Real screenshot: repograph's own module graph — 56 files, 87 edges, 1 cycle and 69 dead
+<sub>Real screenshot: repograph's own module graph: 56 files, 87 edges, 1 cycle and 69 dead
 exports at commit f389fbe, with cycle and dead-code nodes highlighted.</sub>
 
 ### `repograph serve <dir> [--port 4173] [--host 127.0.0.1] [--entry a.ts,b.ts]`
 
-Same viewer, served over HTTP, and re-analyzed on every request — so editing the repo
+Same viewer, served over HTTP, and re-analyzed on every request, so editing the repo
 and refreshing the browser shows the current graph without restarting anything.
 
 ```
@@ -130,10 +116,10 @@ to the network and prints a warning. A busy port is reported as an error.
 ### `repograph report <dir> [--entry a.ts,b.ts]`
 
 A plain-text summary for terminals and CI logs. Exit code is `1` if any import cycle
-was found, `0` otherwise — usable as a cheap CI gate.
+was found, `0` otherwise, so it works as a CI gate.
 
 This is real output, run against the small fixture app bundled in this repo
-(`fixtures/demo-app`, also asserted byte-for-byte in CI — see
+(`fixtures/demo-app`, also asserted byte-for-byte in CI; see
 [`fixtures/demo-app.report.txt`](fixtures/demo-app.report.txt)):
 
 ```
@@ -165,7 +151,7 @@ Most-depended-on files (top 6):
 ### `repograph blast <dir> <file> [--depth n]`
 
 The blast radius of a single file: every file that transitively depends on it, grouped
-by hop distance, and which of its exports are actually the ones being consumed.
+by hop distance, and which of its exports those dependents consume.
 
 ```
 $ repograph blast fixtures/demo-app src/store/state.ts
@@ -181,11 +167,11 @@ Blast radius for src/store/state.ts
 
 ### `repograph analyze <dir> [--entry a.ts,b.ts] [--out file.json]`
 
-The raw analysis as JSON — every file's exports, its resolved internal/external
-imports, every cycle, every dead export — for feeding into your own tooling (a CI
+The raw analysis as JSON: every file's exports, its resolved internal/external
+imports, every cycle and every dead export, for use in your own tooling (a CI
 policy check, a custom report, etc.).
 
-## What it actually detects
+## What it detects
 
 - **Module graph**: every internal `import`/`export ... from`/`require()`/dynamic
   `import()` resolved to a real file in the repo, plus a deduplicated list of external
@@ -193,24 +179,23 @@ policy check, a custom report, etc.).
 - **Circular dependencies**: strongly-connected components of size > 1, computed with
   Tarjan's algorithm.
 - **Dead exports**: exports that no other file in the repo ever imports by name (or by
-  default, for default exports) — conservative in favor of fewer false positives:
+  default, for default exports). It errs toward fewer false positives:
   a file that's the target of any `import * as ns` or `export * from` has none of its
   exports flagged, since a namespace import can touch any of them.
 - **API surface**: every exported function, class, interface, type, enum, and
   const/let/var per file, with its kind, source line, and a truncated signature.
 - **Blast radius**: for any file, every transitive dependent grouped by hop distance,
-  plus which of that file's own exports are the ones actually reached by that BFS.
+  plus which of that file's own exports are the ones reached by that BFS.
 
-## What it deliberately does not do
+## What it does not do
 
 - **No type checking.** repograph parses syntax (imports/exports/declarations) with the
   TypeScript compiler API but never builds a full `ts.Program` or runs the type
-  checker — so it works uniformly on `.js` files with no `tsconfig.json`, and stays
-  fast on large repos. It won't catch a type error; that's `tsc`'s job.
+  checker, so it works the same on `.js` files with no `tsconfig.json` and skips the
+  cost of type checking. It won't catch a type error; that's `tsc`'s job.
 - **No path-alias resolution.** Only relative (`./`, `../`) and repo-root (`/`)
   specifiers are resolved to files; `tsconfig.json` `paths` / webpack aliases are
-  treated as external. (A real repo without aliases — like most libraries and many
-  apps — gets full graph coverage today.)
+  treated as external. A repo without aliases gets full graph coverage.
 - **No monorepo cross-package resolution.** Each `repograph` invocation analyzes one
   directory tree; a workspace with several `packages/*` each importing each other via
   their package names sees those as external imports, not internal edges.
@@ -234,8 +219,8 @@ fixtures/
              job, which asserts the CLI's exact output against it.
 ```
 
-The parser is syntactic-only (no full `ts.Program`/type checker), so it's a single
-fast pass per file regardless of project size or whether a `tsconfig.json` exists.
+The parser is syntactic-only (no full `ts.Program`/type checker), so each file is
+parsed once on its own, whether or not a `tsconfig.json` exists.
 The graph builder resolves every import specifier against the actual set of scanned
 files (trying the specifier as-is, with each supported extension appended, and as a
 directory with an index file) before deciding whether an edge is internal or external.
@@ -266,4 +251,4 @@ Please report vulnerabilities privately as described in [SECURITY.md](SECURITY.m
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).
