@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Security
 
+- `repograph html` (and `serve`) embedded the absolute local path of the analyzed
+  directory as `rootDir` in the report's data payload, although the viewer never
+  shows it. The payload now carries only the directory's basename.
 - Dev dependencies: `vitest`/`@vitest/coverage-v8` 2.x -> 4.1.12 and the viewer's
   `vite` 5 -> 6.4, clearing the test/dev-server advisories (tinypool
   GHSA-5gmw-xhrv-c9v3 / GHSA-85c8-ppgw-ccpr, esbuild GHSA-67mh-4wv8-2f99,

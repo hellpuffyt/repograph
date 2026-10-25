@@ -5,6 +5,13 @@ dependency graph you can click through, with circular-dependency detection, dead
 detection, API-surface extraction, and click-to-highlight blast radius — rendered as an
 explorable graph, not a wall of text.
 
+[Case study ↗](https://hellpuff.dev/work/repograph)
+
+<img src="docs/assets/blast-radius.webp" width="100%" alt="repograph viewer with packages/core/src/types.ts selected: its API surface and 14-file blast radius listed on the right and its dependents highlighted in blue on the graph">
+
+<sub>Real screenshot: `repograph html .` run on this repository at commit f389fbe. Selecting
+`packages/core/src/types.ts` shows its API surface and a 14-file blast radius, highlighted on the graph.</sub>
+
 ```
 repograph html ./my-project --out map.html
 ```
@@ -43,12 +50,26 @@ explore:
 - **The output is one self-contained HTML file.** No server to keep running, no
   `node_modules` to ship alongside a report — `repograph html` produces a single file
   you can attach to a PR, open from a file:// URL, or drop in an internal wiki.
-- **Zero runtime dependencies for the analysis engine.** `@repograph/core` parses with
+- **One runtime dependency for the analysis engine: the TypeScript compiler.** `@repograph/core` parses with
   the TypeScript compiler API (the same parser `tsc` itself uses) and does everything
   else — graph building, SCC/cycle detection, dead-export analysis, blast-radius BFS,
   even the graph's force-directed layout in the viewer — with no additional runtime
   dependency. The CLI's only dependency is `@repograph/core`; the web viewer's only
   *runtime* dependency is React.
+
+## Status
+
+Version 0.1.0, **not published to npm** (see below). CI runs build and tests on Ubuntu,
+Windows and macOS with Node 20 and 22, plus lint, typecheck, coverage thresholds and a
+dogfood job that diffs the CLI's output against the bundled fixture. The evidence behind
+these claims, and what is not covered, is in
+[docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md).
+
+## Prerequisites
+
+- Node.js >= 18 (`engines`); CI tests Node 20 and 22.
+- npm (the repo is an npm workspace; `package-lock.json` is committed).
+- A browser to open the generated HTML. No network access is needed at runtime.
 
 ## Install
 
@@ -77,10 +98,18 @@ Writes a self-contained interactive HTML file — the graph, the analysis, and t
 viewer, all in one file with no external requests. This is the main way to use
 repograph.
 
+The embedded data carries repo-relative file paths and the analyzed directory's
+basename only — not its absolute location on your disk — so the file is safe to share.
+
 ```
 $ repograph html fixtures/demo-app --entry src/index.ts --out map.html
 Wrote interactive graph to map.html (8 files, 1 cycles, 7 dead exports).
 ```
+
+<img src="docs/assets/dependency-graph.webp" width="100%" alt="repograph force-directed dependency graph of its own repository, with cycle and dead-code nodes highlighted">
+
+<sub>Real screenshot: repograph's own module graph — 56 files, 87 edges, 1 cycle and 69 dead
+exports at commit f389fbe, with cycle and dead-code nodes highlighted.</sub>
 
 ### `repograph serve <dir> [--port 4173] [--host 127.0.0.1] [--entry a.ts,b.ts]`
 
@@ -89,7 +118,7 @@ and refreshing the browser shows the current graph without restarting anything.
 
 ```
 $ repograph serve fixtures/demo-app --entry src/index.ts
-repograph serving /path/to/fixtures/demo-app at http://127.0.0.1:4173
+repograph serving <absolute path to>/fixtures/demo-app at http://127.0.0.1:4173
 Press Ctrl+C to stop.
 ```
 
@@ -214,13 +243,17 @@ directory with an index file) before deciding whether an edge is internal or ext
 ## Development
 
 ```
-npm install
+npm ci
 npm run build       # builds core, then the web viewer, then the CLI
 npm test -w packages/core
-npm test -w packages/cli
+npm test -w packages/cli   # needs the build: the CLI tests load the built viewer
 npm run lint
 npm run typecheck
+npm run coverage -w packages/core   # fails below the thresholds in vitest.config.ts
+npm run coverage -w packages/cli
 ```
+
+`npm test` at the root runs only the core suite.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more.
 
