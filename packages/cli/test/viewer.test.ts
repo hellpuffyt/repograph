@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import { analyzeProject } from "@repograph/core";
 import { afterEach, describe, expect, it } from "vitest";
 import { loadViewerTemplate, renderViewerHtml, toViewerData } from "../src/viewer.js";
@@ -18,6 +19,17 @@ describe("toViewerData", () => {
     expect(data.projectName).toBe("my-project");
     expect(() => new Date(data.generatedAt).toISOString()).not.toThrow();
     expect(data.fileCount).toBe(1);
+  });
+
+  it("never embeds the absolute local repository path (regression)", () => {
+    const fx = writeFixture({ "src/a.ts": `export const a = 1;`, "src/b.ts": `import { a } from "./a";` });
+    cleanup = fx.cleanup;
+    const result = analyzeProject(fx.dir);
+    const data = toViewerData(result, "my-project");
+    expect(data.rootDir).toBe(basename(fx.dir));
+    const html = renderViewerHtml(loadViewerTemplate(), data);
+    expect(html).not.toContain(fx.dir);
+    expect(html).not.toContain(JSON.stringify(fx.dir).slice(1, -1));
   });
 });
 

@@ -104,6 +104,8 @@ describe("cmdHtml", () => {
     expect(existsSync(outFile)).toBe(true);
     const html = readFileSync(outFile, "utf8");
     expect(html).toContain("window.__REPOGRAPH_DATA__");
+    // The shareable report must not carry the absolute local path of the repo.
+    expect(html).not.toContain(fx.dir);
     expect(out[0]).toContain("Wrote interactive graph");
   });
 
